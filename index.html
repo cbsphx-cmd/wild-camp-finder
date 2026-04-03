@@ -212,9 +212,9 @@
 
 <script>
   // ── Keys ─────────────────────────────────────────────────────────────
-  const GEMINI_KEY   = "AIzaSyACvBQEzkRhrw7_iroIkSzGpRUzI-u3XTM";
-  const MAPS_KEY     = "AIzaSyAxRE0GVlSLDTDL3sjcNCnreQ4yk4hyfJQ";
-  const GEMINI_URL   = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`;
+  const GROQ_KEY = "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";
+  const MAPS_KEY = "AIzaSyAxRE0GVlSLDTDL3sjcNCnreQ4yk4hyfJQ";
+  const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
   const FILTERS = ["All","BLM","National Forest","State Park","Free Camping","Dispersed","With Water","No Reservations"];
 
@@ -278,12 +278,20 @@ Rules:
     document.getElementById("searchBtn").disabled = true;
 
     try {
-      const res = await fetch(GEMINI_URL, {
+      const res = await fetch(GROQ_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${GROQ_KEY}`
+        },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: PROMPT_TEMPLATE(city) }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
+          model: "llama-3.3-70b-versatile",
+          temperature: 0.7,
+          max_tokens: 2048,
+          messages: [
+            { role: "system", content: "You are a public lands camping expert. Return ONLY raw JSON with no markdown, no code fences, no extra text." },
+            { role: "user", content: PROMPT_TEMPLATE(city) }
+          ]
         })
       });
 
@@ -293,9 +301,9 @@ Rules:
       }
 
       const data = await res.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      const text = data?.choices?.[0]?.message?.content || "";
       const match = text.match(/\{[\s\S]*\}/);
-      if (!match) throw new Error("Unexpected response format from Gemini");
+      if (!match) throw new Error("Unexpected response format from Groq");
       const parsed = JSON.parse(match[0]);
       if (!parsed.spots?.length) throw new Error("No camping spots returned");
 
