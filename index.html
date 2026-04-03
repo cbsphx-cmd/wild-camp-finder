@@ -127,9 +127,7 @@
     }
     .carrier-btn:hover { opacity:0.85; transform:translateY(-1px); }
     .carrier-btn:active { transform:scale(0.97); }
-    .carrier-verizon { background:rgba(205,0,0,0.15); border-color:rgba(205,0,0,0.4); color:#ff6b6b; }
-    .carrier-att     { background:rgba(0,164,228,0.12); border-color:rgba(0,164,228,0.35); color:#5bc8f5; }
-    .carrier-tmobile { background:rgba(226,0,116,0.12); border-color:rgba(226,0,116,0.35); color:#f06daa; }
+    .carrier-opensignal { background:rgba(90,122,74,0.15); border-color:rgba(138,173,122,0.4); color:var(--sage); }
     .carrier-icon { font-size:15px; }
   </style>
 </head>
@@ -190,16 +188,10 @@
     </div>
     <div class="coverage-section">
       <div class="coverage-label">📶 Check Cell Coverage</div>
-      <p class="coverage-note">Opens the carrier's official coverage map centered on this campsite.</p>
+      <p class="coverage-note">Crowdsourced coverage data for all carriers, centered on this campsite.</p>
       <div class="carrier-btns">
-        <a id="vzBtn" class="carrier-btn carrier-verizon" target="_blank" rel="noopener">
-          <span class="carrier-icon">🔴</span> Verizon
-        </a>
-        <a id="attBtn" class="carrier-btn carrier-att" target="_blank" rel="noopener">
-          <span class="carrier-icon">🔵</span> AT&amp;T
-        </a>
-        <a id="tmBtn" class="carrier-btn carrier-tmobile" target="_blank" rel="noopener">
-          <span class="carrier-icon">🩷</span> T-Mobile
+        <a id="opensignalBtn" class="carrier-btn carrier-opensignal" target="_blank" rel="noopener">
+          <span class="carrier-icon">📡</span> View Coverage Map (All Carriers)
         </a>
       </div>
     </div>
@@ -385,7 +377,7 @@ Rules:
 
     const mapEl = document.getElementById("mapContainer");
     if (spot.lat && spot.lng && MAPS_KEY) {
-      mapEl.innerHTML = `<iframe title="map" src="https://www.google.com/maps/embed/v1/place?key=${MAPS_KEY}&q=${spot.lat},${spot.lng}&zoom=11&maptype=terrain"></iframe>`;
+      mapEl.innerHTML = `<iframe title="map" src="https://www.google.com/maps/embed/v1/place?key=${MAPS_KEY}&q=${spot.lat},${spot.lng}&zoom=11&maptype=satellite"></iframe>`;
     } else {
       mapEl.innerHTML = `<div class="map-placeholder"><div class="icon">🗺️</div><p>${spot.lat}, ${spot.lng}</p></div>`;
     }
@@ -412,14 +404,9 @@ Rules:
       window.open(`https://www.google.com/maps/dir/?api=1&destination=${spot.lat},${spot.lng}`, "_blank");
 
 
-    // Carrier coverage deep-links
-    const zoom = 13;
-    document.getElementById("vzBtn").href =
-      `https://www.verizon.com/coverage-map/#lat=${spot.lat}&lon=${spot.lng}&zoom=${zoom}`;
-    document.getElementById("attBtn").href =
-      `https://www.att.com/maps/wireless-coverage-map.html#lat=${spot.lat}&lng=${spot.lng}&zoom=${zoom}`;
-    document.getElementById("tmBtn").href =
-      `https://www.t-mobile.com/coverage/coverage-map?icid=MGPO_TMO_U_COVERMAP_528TE1254K67965#lat=${spot.lat}&lng=${spot.lng}&zoom=${zoom}`;
+    // OpenSignal coverage deep-link (all carriers, reliable lat/lng centering)
+    document.getElementById("opensignalBtn").href =
+      `https://opensignal.com/networks#maps/all-operators/signal/${spot.lat}/${spot.lng}`;
 
     document.getElementById("overlay").classList.remove("hidden");
     document.body.style.overflow = "hidden";
