@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wild Camp Finder</title>
+  <meta name="description" content="Find public land camping spots near any US city — BLM, National Forest, State Parks. Rated, mapped, with directions and cell coverage info." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --earth:#2d2a1e; --moss:#5a7a4a; --sage:#8aad7a; --cream:#f5f0e8; --ember:#c8602a; }
+    body { background:var(--earth); color:var(--cream); font-family:'DM Sans',sans-serif; min-height:100vh; }
+
+    .app { min-height:100vh; background:var(--earth); background-image:radial-gradient(ellipse 80% 50% at 50% -10%, rgba(90,122,74,0.25) 0%, transparent 60%); padding-bottom:80px; }
+
+    /* Header */
+    .header { padding:48px 24px 32px; text-align:center; position:relative; }
+    .header::after { content:''; display:block; width:80px; height:1px; background:linear-gradient(90deg,transparent,var(--sage),transparent); margin:24px auto 0; }
+    .header-eyebrow { font-size:11px; letter-spacing:4px; text-transform:uppercase; color:var(--sage); margin-bottom:12px; font-weight:500; }
+    .header-title { font-family:'Playfair Display',serif; font-size:clamp(36px,7vw,64px); font-weight:700; color:var(--cream); line-height:1.1; }
+    .header-title em { color:var(--sage); font-style:italic; }
+    .header-sub { margin-top:12px; color:rgba(245,240,232,0.55); font-size:15px; font-weight:300; }
+
+    /* Search */
+    .search-wrap { max-width:580px; margin:0 auto; padding:0 24px 40px; }
+    .search-row { display:flex; gap:10px; }
+    .search-input { flex:1; padding:16px 20px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:12px; color:var(--cream); font-size:16px; font-family:'DM Sans',sans-serif; outline:none; transition:border-color 0.2s,background 0.2s; }
+    .search-input::placeholder { color:rgba(245,240,232,0.35); }
+    .search-input:focus { border-color:var(--sage); background:rgba(255,255,255,0.1); }
+    .search-btn { padding:16px 28px; background:var(--moss); border:none; border-radius:12px; color:var(--cream); font-size:15px; font-weight:500; cursor:pointer; font-family:'DM Sans',sans-serif; transition:background 0.2s,transform 0.1s; white-space:nowrap; }
+    .search-btn:hover { background:var(--sage); }
+    .search-btn:active { transform:scale(0.98); }
+    .search-btn:disabled { opacity:0.5; cursor:not-allowed; }
+
+    /* Filters */
+    .filters { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
+    .filter-chip { padding:6px 14px; border-radius:20px; font-size:12px; font-weight:500; border:1px solid rgba(255,255,255,0.15); cursor:pointer; color:rgba(245,240,232,0.65); background:transparent; font-family:'DM Sans',sans-serif; transition:all 0.15s; letter-spacing:0.3px; }
+    .filter-chip.active { background:var(--moss); border-color:var(--moss); color:var(--cream); }
+    .filter-chip:hover:not(.active) { border-color:var(--sage); color:var(--sage); }
+
+    /* Results */
+    .results { max-width:960px; margin:0 auto; padding:0 20px; }
+    .results-header { display:flex; align-items:center; gap:12px; margin-bottom:24px; }
+    .results-count { font-size:13px; color:rgba(245,240,232,0.45); letter-spacing:0.5px; }
+    .results-line { flex:1; height:1px; background:rgba(255,255,255,0.08); }
+
+    /* Cards */
+    .cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:20px; }
+    .card { background:linear-gradient(145deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03)); border:1px solid rgba(255,255,255,0.1); border-radius:16px; overflow:hidden; cursor:pointer; transition:transform 0.2s,border-color 0.2s,box-shadow 0.2s; animation:fadeUp 0.4s ease both; }
+    .card:hover { transform:translateY(-4px); border-color:rgba(138,173,122,0.4); box-shadow:0 12px 40px rgba(0,0,0,0.35); }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    .card:nth-child(1){animation-delay:.05s} .card:nth-child(2){animation-delay:.1s} .card:nth-child(3){animation-delay:.15s}
+    .card:nth-child(4){animation-delay:.2s} .card:nth-child(5){animation-delay:.25s} .card:nth-child(6){animation-delay:.3s}
+    .card-badge { padding:8px 16px; font-size:10px; letter-spacing:2px; text-transform:uppercase; font-weight:500; color:var(--sage); border-bottom:1px solid rgba(255,255,255,0.06); background:rgba(90,122,74,0.12); }
+    .card-body { padding:18px; }
+    .card-name { font-family:'Playfair Display',serif; font-size:20px; font-weight:700; color:var(--cream); margin-bottom:4px; line-height:1.2; }
+    .card-loc { font-size:12px; color:rgba(245,240,232,0.45); margin-bottom:14px; letter-spacing:0.3px; }
+    .card-rating { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+    .stars { color:#f0b429; font-size:14px; letter-spacing:1px; }
+    .rating-val { font-size:14px; font-weight:500; }
+    .review-count { font-size:12px; color:rgba(245,240,232,0.4); }
+    .card-tags { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+    .tag { padding:3px 10px; border-radius:10px; font-size:11px; background:rgba(255,255,255,0.07); color:rgba(245,240,232,0.6); letter-spacing:0.3px; }
+    .card-desc { font-size:13px; color:rgba(245,240,232,0.55); line-height:1.6; }
+    .card-footer { padding:12px 18px; border-top:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center; }
+    .card-dist { font-size:12px; color:rgba(245,240,232,0.4); }
+    .card-cta { font-size:12px; color:var(--sage); font-weight:500; letter-spacing:0.5px; }
+
+    /* Detail Panel */
+    .overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:100; display:flex; align-items:flex-end; animation:fadeIn 0.2s ease; }
+    .overlay.hidden { display:none; }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    .panel { width:100%; max-height:90vh; overflow-y:auto; background:#1e1c14; border-radius:24px 24px 0 0; border-top:1px solid rgba(255,255,255,0.1); animation:slideUp 0.3s cubic-bezier(0.16,1,0.3,1); }
+    @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+    .panel-handle { width:36px; height:4px; background:rgba(255,255,255,0.15); border-radius:2px; margin:14px auto 0; }
+    .panel-header { padding:20px 24px 0; }
+    .panel-badge { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--sage); font-weight:500; margin-bottom:8px; }
+    .panel-name { font-family:'Playfair Display',serif; font-size:28px; font-weight:700; color:var(--cream); margin-bottom:6px; }
+    .panel-loc { font-size:13px; color:rgba(245,240,232,0.45); margin-bottom:16px; }
+    .panel-meta { display:flex; gap:20px; align-items:center; flex-wrap:wrap; margin-bottom:20px; }
+    .panel-rating { display:flex; align-items:center; gap:8px; }
+    .map-container { margin:0 24px 20px; height:260px; border-radius:14px; overflow:hidden; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.04); display:flex; align-items:center; justify-content:center; }
+    .map-container iframe { width:100%; height:100%; border:none; }
+    .map-placeholder { text-align:center; color:rgba(245,240,232,0.3); font-size:14px; padding:20px; }
+    .map-placeholder .icon { font-size:36px; margin-bottom:8px; }
+    .panel-section { padding:0 24px 20px; }
+    .section-title { font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--sage); font-weight:500; margin-bottom:12px; }
+    .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px; }
+    .info-cell { background:rgba(255,255,255,0.05); border-radius:10px; padding:12px; }
+    .info-label { font-size:10px; letter-spacing:1px; text-transform:uppercase; color:rgba(245,240,232,0.35); margin-bottom:4px; }
+    .info-val { font-size:14px; color:var(--cream); font-weight:500; }
+    .directions-list { list-style:none; }
+    .directions-list li { display:flex; gap:14px; align-items:flex-start; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05); font-size:14px; color:rgba(245,240,232,0.75); line-height:1.5; }
+    .directions-list li:last-child { border-bottom:none; }
+    .step-num { min-width:24px; height:24px; border-radius:50%; background:var(--moss); color:var(--cream); font-size:11px; font-weight:600; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+    .panel-actions { padding:0 24px 32px; display:flex; gap:12px; }
+    .btn-primary { flex:1; padding:16px; background:var(--moss); border:none; border-radius:12px; color:var(--cream); font-size:15px; font-weight:500; cursor:pointer; font-family:'DM Sans',sans-serif; transition:background 0.2s; }
+    .btn-primary:hover { background:var(--sage); }
+    .btn-secondary { padding:16px 20px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); border-radius:12px; color:var(--cream); font-size:15px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:background 0.2s; }
+    .btn-secondary:hover { background:rgba(255,255,255,0.12); }
+
+    /* States */
+    .loading { text-align:center; padding:60px 20px; color:rgba(245,240,232,0.4); display:none; }
+    .loading.visible { display:block; }
+    .spinner { width:36px; height:36px; margin:0 auto 16px; border:2px solid rgba(255,255,255,0.1); border-top-color:var(--sage); border-radius:50%; animation:spin 0.8s linear infinite; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    .loading p { font-size:14px; font-style:italic; }
+    .empty { text-align:center; padding:80px 20px; color:rgba(245,240,232,0.3); }
+    .empty-icon { font-size:48px; margin-bottom:16px; }
+    .empty h3 { font-family:'Playfair Display',serif; font-size:22px; margin-bottom:8px; color:rgba(245,240,232,0.5); }
+    .empty p { font-size:14px; }
+    .error-msg { max-width:480px; margin:20px auto; padding:14px 18px; background:rgba(200,96,42,0.15); border:1px solid rgba(200,96,42,0.3); border-radius:10px; font-size:13px; color:rgba(245,240,232,0.7); text-align:center; display:none; }
+    .error-msg.visible { display:block; }
+
+    /* Coverage */
+    .coverage-section { padding:0 24px 24px; }
+    .coverage-label { font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--sage); font-weight:500; margin-bottom:12px; }
+    .coverage-note { font-size:12px; color:rgba(245,240,232,0.35); margin-bottom:14px; line-height:1.5; }
+    .carrier-btns { display:flex; gap:10px; flex-wrap:wrap; }
+    .carrier-btn {
+      display:flex; align-items:center; gap:8px;
+      padding:11px 18px; border-radius:10px; border:1px solid;
+      font-size:13px; font-weight:600; cursor:pointer;
+      font-family:'DM Sans',sans-serif; text-decoration:none;
+      transition:opacity 0.15s, transform 0.1s; flex:1; min-width:120px; justify-content:center;
+    }
+    .carrier-btn:hover { opacity:0.85; transform:translateY(-1px); }
+    .carrier-btn:active { transform:scale(0.97); }
+    .carrier-verizon { background:rgba(205,0,0,0.15); border-color:rgba(205,0,0,0.4); color:#ff6b6b; }
+    .carrier-att     { background:rgba(0,164,228,0.12); border-color:rgba(0,164,228,0.35); color:#5bc8f5; }
+    .carrier-tmobile { background:rgba(226,0,116,0.12); border-color:rgba(226,0,116,0.35); color:#f06daa; }
+    .carrier-icon { font-size:15px; }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="header-eyebrow">⛺ Public Lands Explorer</div>
+    <h1 class="header-title">Find Your <em>Wild</em> Camp</h1>
+    <p class="header-sub">BLM · National Forest · State Parks · Free Dispersed Sites</p>
+  </div>
+
+  <div class="search-wrap">
+    <div class="search-row">
+      <input class="search-input" id="cityInput" placeholder="Enter a destination city or region..." />
+      <button class="search-btn" id="searchBtn" onclick="search()">Find Camps</button>
+    </div>
+    <div class="filters" id="filters"></div>
+  </div>
+
+  <div class="results">
+    <div class="error-msg" id="errorMsg"></div>
+    <div class="loading" id="loading"><div class="spinner"></div><p id="loadingText">Scouting public lands…</p></div>
+    <div id="resultsHeader" style="display:none">
+      <div class="results-header">
+        <span class="results-count" id="resultsCount"></span>
+        <div class="results-line"></div>
+      </div>
+    </div>
+    <div class="cards" id="cards"></div>
+    <div class="empty" id="emptyState">
+      <div class="empty-icon">🗺️</div>
+      <h3>Enter a destination above</h3>
+      <p>We'll find public land camping near you — rated, mapped, and with directions.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Panel -->
+<div class="overlay hidden" id="overlay" onclick="handleOverlayClick(event)">
+  <div class="panel">
+    <div class="panel-handle"></div>
+    <div class="panel-header">
+      <div class="panel-badge" id="pBadge"></div>
+      <div class="panel-name" id="pName"></div>
+      <div class="panel-loc" id="pLoc"></div>
+      <div class="panel-meta" id="pMeta"></div>
+    </div>
+    <div class="map-container" id="mapContainer"></div>
+    <div class="panel-section">
+      <div class="section-title">Site Details</div>
+      <div class="info-grid" id="pInfo"></div>
+      <div class="card-tags" id="pTags" style="margin-bottom:0"></div>
+    </div>
+    <div class="panel-section" id="pDirSection">
+      <div class="section-title" id="pDirTitle"></div>
+      <ul class="directions-list" id="pDirs"></ul>
+    </div>
+    <div class="coverage-section">
+      <div class="coverage-label">📶 Check Cell Coverage</div>
+      <p class="coverage-note">Opens the carrier's official coverage map centered on this campsite.</p>
+      <div class="carrier-btns">
+        <a id="vzBtn" class="carrier-btn carrier-verizon" target="_blank" rel="noopener">
+          <span class="carrier-icon">🔴</span> Verizon
+        </a>
+        <a id="attBtn" class="carrier-btn carrier-att" target="_blank" rel="noopener">
+          <span class="carrier-icon">🔵</span> AT&amp;T
+        </a>
+        <a id="tmBtn" class="carrier-btn carrier-tmobile" target="_blank" rel="noopener">
+          <span class="carrier-icon">🩷</span> T-Mobile
+        </a>
+      </div>
+    </div>
+    <div class="panel-actions">
+      <button class="btn-primary" id="mapsBtn">🧭 Open in Google Maps</button>
+      <button class="btn-secondary" onclick="closePanel()">✕</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Keys ─────────────────────────────────────────────────────────────
+  const GEMINI_KEY   = "AIzaSyACvBQEzkRhrw7_iroIkSzGpRUzI-u3XTM";
+  const MAPS_KEY     = "AIzaSyAxRE0GVlSLDTDL3sjcNCnreQ4yk4hyfJQ";
+  const GEMINI_URL   = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`;
+
+  const FILTERS = ["All","BLM","National Forest","State Park","Free Camping","Dispersed","With Water","No Reservations"];
+
+  const PROMPT_TEMPLATE = city => `You are a public lands camping expert. Return ONLY raw JSON with no markdown, no code fences, no extra text.
+
+Find 6 diverse, real public land camping spots near ${city}.
+
+Return exactly this structure:
+{"spots":[{"id":"unique-slug","name":"Campsite Name","landType":"BLM","location":"County, State","lat":36.1,"lng":-118.2,"rating":4.3,"reviewCount":112,"distanceMiles":28,"fee":"Free","reservations":"No reservations","season":"Apr–Nov","elevation":"7,200 ft","tags":["dispersed","no water","fire pits","dog-friendly"],"description":"2-3 vivid sentences about the site and surroundings.","directions":["Take Highway X north to exit Y","Head east on Forest Road 10 for 8 miles","Turn right at the brown camping sign","Site is 0.5 miles down the dirt road"]}]}
+
+Rules:
+- Exactly 6 spots
+- Real locations with accurate lat/lng
+- Realistic ratings between 3.8 and 4.9
+- Mix of land types: BLM, National Forest, State Park, etc.
+- Vary distances (5 mi to 80 mi from ${city})
+- Include both free and paid options`;
+
+  // ── State ─────────────────────────────────────────────────────────────
+  let allSpots = [];
+  let activeFilter = "All";
+  let currentCity = "";
+
+  // ── Init ──────────────────────────────────────────────────────────────
+  buildFilters();
+  document.getElementById("cityInput").addEventListener("keydown", e => { if (e.key === "Enter") search(); });
+
+  function buildFilters() {
+    const wrap = document.getElementById("filters");
+    FILTERS.forEach(f => {
+      const btn = document.createElement("button");
+      btn.className = "filter-chip" + (f === "All" ? " active" : "");
+      btn.textContent = f;
+      btn.onclick = () => setFilter(f);
+      wrap.appendChild(btn);
+    });
+  }
+
+  function setFilter(f) {
+    activeFilter = f;
+    document.querySelectorAll(".filter-chip").forEach(b => b.classList.toggle("active", b.textContent === f));
+    renderCards();
+  }
+
+  // ── Search ────────────────────────────────────────────────────────────
+  async function search() {
+    const city = document.getElementById("cityInput").value.trim();
+    if (!city) return;
+
+    currentCity = city;
+    allSpots = [];
+    activeFilter = "All";
+    document.querySelectorAll(".filter-chip").forEach(b => b.classList.toggle("active", b.textContent === "All"));
+
+    showLoading(true);
+    showError("");
+    showEmpty(false);
+    document.getElementById("resultsHeader").style.display = "none";
+    document.getElementById("cards").innerHTML = "";
+    document.getElementById("loadingText").textContent = `Scouting public lands near ${city}…`;
+    document.getElementById("searchBtn").disabled = true;
+
+    try {
+      const res = await fetch(GEMINI_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: PROMPT_TEMPLATE(city) }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error?.message || `HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      const match = text.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error("Unexpected response format from Gemini");
+      const parsed = JSON.parse(match[0]);
+      if (!parsed.spots?.length) throw new Error("No camping spots returned");
+
+      allSpots = parsed.spots;
+      renderCards();
+
+    } catch (e) {
+      showError(`Could not load camping spots: ${e.message}`);
+      showEmpty(true);
+      document.getElementById("emptyState").innerHTML = `<div class="empty-icon">😕</div><h3>Something went wrong</h3><p>${e.message}</p>`;
+    } finally {
+      showLoading(false);
+      document.getElementById("searchBtn").disabled = false;
+    }
+  }
+
+  // ── Render Cards ──────────────────────────────────────────────────────
+  function renderCards() {
+    const filtered = allSpots.filter(s => {
+      if (activeFilter === "All") return true;
+      return [...(s.tags||[]), s.landType||""].join(" ").toLowerCase().includes(activeFilter.toLowerCase());
+    });
+
+    const cards = document.getElementById("cards");
+    cards.innerHTML = "";
+    const header = document.getElementById("resultsHeader");
+
+    if (filtered.length > 0) {
+      header.style.display = "block";
+      document.getElementById("resultsCount").textContent = `${filtered.length} spots near ${currentCity}`;
+      showEmpty(false);
+    } else {
+      header.style.display = "none";
+      showEmpty(true);
+      document.getElementById("emptyState").innerHTML = `<div class="empty-icon">🌲</div><h3>No spots match this filter</h3><p>Try a different filter or search a broader region.</p>`;
+    }
+
+    filtered.forEach(spot => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <div class="card-badge">${esc(spot.landType)}</div>
+        <div class="card-body">
+          <div class="card-name">${esc(spot.name)}</div>
+          <div class="card-loc">📍 ${esc(spot.location)}</div>
+          <div class="card-rating">
+            <span class="stars">${stars(spot.rating)}</span>
+            <span class="rating-val" style="color:${scoreColor(spot.rating)}">${spot.rating}</span>
+            <span class="review-count">(${spot.reviewCount} reviews)</span>
+          </div>
+          <div class="card-tags">
+            <span class="tag">${esc(spot.fee)}</span>
+            <span class="tag">${esc(spot.season)}</span>
+            ${(spot.tags||[]).slice(0,2).map(t=>`<span class="tag">${esc(t)}</span>`).join("")}
+          </div>
+          <div class="card-desc">${esc(spot.description)}</div>
+        </div>
+        <div class="card-footer">
+          <span class="card-dist">~${spot.distanceMiles} mi away</span>
+          <span class="card-cta">View details →</span>
+        </div>`;
+      card.onclick = () => openPanel(spot);
+      cards.appendChild(card);
+    });
+  }
+
+  // ── Detail Panel ──────────────────────────────────────────────────────
+  function openPanel(spot) {
+    document.getElementById("pBadge").textContent = spot.landType;
+    document.getElementById("pName").textContent = spot.name;
+    document.getElementById("pLoc").textContent = `📍 ${spot.location} · ${spot.elevation}`;
+    document.getElementById("pMeta").innerHTML = `
+      <div class="panel-rating">
+        <span class="stars">${stars(spot.rating)}</span>
+        <span class="rating-val" style="color:${scoreColor(spot.rating)}">${spot.rating}</span>
+        <span class="review-count">(${spot.reviewCount} reviews)</span>
+      </div>
+      <span class="tag">~${spot.distanceMiles} mi away</span>`;
+
+    const mapEl = document.getElementById("mapContainer");
+    if (spot.lat && spot.lng && MAPS_KEY) {
+      mapEl.innerHTML = `<iframe title="map" src="https://www.google.com/maps/embed/v1/place?key=${MAPS_KEY}&q=${spot.lat},${spot.lng}&zoom=11&maptype=terrain"></iframe>`;
+    } else {
+      mapEl.innerHTML = `<div class="map-placeholder"><div class="icon">🗺️</div><p>${spot.lat}, ${spot.lng}</p></div>`;
+    }
+
+    document.getElementById("pInfo").innerHTML = `
+      <div class="info-cell"><div class="info-label">Fee</div><div class="info-val">${esc(spot.fee)}</div></div>
+      <div class="info-cell"><div class="info-label">Reservations</div><div class="info-val">${esc(spot.reservations)}</div></div>
+      <div class="info-cell"><div class="info-label">Season</div><div class="info-val">${esc(spot.season)}</div></div>
+      <div class="info-cell"><div class="info-label">Elevation</div><div class="info-val">${esc(spot.elevation)}</div></div>`;
+
+    document.getElementById("pTags").innerHTML = (spot.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join("");
+
+    const dirSection = document.getElementById("pDirSection");
+    if (spot.directions?.length) {
+      document.getElementById("pDirTitle").textContent = `Directions from ${currentCity}`;
+      document.getElementById("pDirs").innerHTML = spot.directions.map((s,i) =>
+        `<li><span class="step-num">${i+1}</span><span>${esc(s)}</span></li>`).join("");
+      dirSection.style.display = "block";
+    } else {
+      dirSection.style.display = "none";
+    }
+
+    document.getElementById("mapsBtn").onclick = () =>
+      window.open(`https://www.google.com/maps/dir/?api=1&destination=${spot.lat},${spot.lng}`, "_blank");
+
+
+    // Carrier coverage deep-links
+    const zoom = 13;
+    document.getElementById("vzBtn").href =
+      `https://www.verizon.com/coverage-map/#lat=${spot.lat}&lon=${spot.lng}&zoom=${zoom}`;
+    document.getElementById("attBtn").href =
+      `https://www.att.com/maps/wireless-coverage-map.html#lat=${spot.lat}&lng=${spot.lng}&zoom=${zoom}`;
+    document.getElementById("tmBtn").href =
+      `https://www.t-mobile.com/coverage/coverage-map?icid=MGPO_TMO_U_COVERMAP_528TE1254K67965#lat=${spot.lat}&lng=${spot.lng}&zoom=${zoom}`;
+
+    document.getElementById("overlay").classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closePanel() {
+    document.getElementById("overlay").classList.add("hidden");
+    document.body.style.overflow = "";
+  }
+
+  function handleOverlayClick(e) {
+    if (e.target === document.getElementById("overlay")) closePanel();
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────
+  function stars(r) {
+    const full = Math.floor(r);
+    const half = r % 1 >= 0.5;
+    return "★".repeat(full) + (half ? "½" : "") + "☆".repeat(5 - full - (half ? 1 : 0));
+  }
+  function scoreColor(s) { return s >= 4.5 ? "#8aad7a" : s >= 4.0 ? "#f0b429" : "#c8602a"; }
+  function showLoading(v) { document.getElementById("loading").classList.toggle("visible", v); }
+  function showError(msg) { const el = document.getElementById("errorMsg"); el.textContent = msg; el.classList.toggle("visible", !!msg); }
+  function showEmpty(v) { document.getElementById("emptyState").style.display = v ? "block" : "none"; }
+  function esc(s) { return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+</script>
+</body>
+</html>
