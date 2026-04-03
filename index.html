@@ -188,10 +188,10 @@
     </div>
     <div class="coverage-section">
       <div class="coverage-label">📶 Check Cell Coverage</div>
-      <p class="coverage-note">Shows cell towers & LTE coverage near this campsite (CellMapper, crowdsourced). Select your carrier after opening.</p>
+      <p class="coverage-note">Official FCC data — shows AT&T, T-Mobile, Verizon & more. Opens centered on this campsite. Select a carrier in the Providers tab.</p>
       <div class="carrier-btns">
         <a id="opensignalBtn" class="carrier-btn carrier-opensignal" target="_blank" rel="noopener">
-          <span class="carrier-icon">📡</span> View Cell Tower Map
+          <span class="carrier-icon">📶</span> FCC Mobile Coverage Map
         </a>
       </div>
     </div>
@@ -210,9 +210,24 @@
 
   const FILTERS = ["All","BLM","National Forest","State Park","Free Camping","Dispersed","With Water","No Reservations"];
 
-  const PROMPT_TEMPLATE = city => `You are a public lands camping expert. Return ONLY raw JSON with no markdown, no code fences, no extra text.
+  const FILTER_HINTS = {
+    "All": "Mix of land types: BLM, National Forest, State Park, etc. Include both free and paid options.",
+    "BLM": "All 6 spots must be on BLM (Bureau of Land Management) land.",
+    "National Forest": "All 6 spots must be in a National Forest.",
+    "State Park": "All 6 spots must be in a State Park.",
+    "Free Camping": "All 6 spots must be completely free with no camping fee.",
+    "Dispersed": "All 6 spots must be dispersed/primitive camping with no formal campsite infrastructure.",
+    "With Water": "All 6 spots must have potable water available on site.",
+    "No Reservations": "All 6 spots must be first-come first-served with no reservations required."
+  };
 
-Find 6 diverse, real public land camping spots near ${city}.
+  const PROMPT_TEMPLATE = (city, filter) => {
+    const hint = FILTER_HINTS[filter] || FILTER_HINTS["All"];
+    return `You are a public lands camping expert. Return ONLY raw JSON with no markdown, no code fences, no extra text.
+
+Find 6 real public land camping spots near ${city}.
+
+Filter requirement: ${hint}
 
 Return exactly this structure:
 {"spots":[{"id":"unique-slug","name":"Campsite Name","landType":"BLM","location":"County, State","lat":36.1,"lng":-118.2,"rating":4.3,"reviewCount":112,"distanceMiles":28,"fee":"Free","reservations":"No reservations","season":"Apr–Nov","elevation":"7,200 ft","tags":["dispersed","no water","fire pits","dog-friendly"],"description":"2-3 vivid sentences about the site and surroundings.","directions":["Take Highway X north to exit Y","Head east on Forest Road 10 for 8 miles","Turn right at the brown camping sign","Site is 0.5 miles down the dirt road"]}]}
@@ -221,9 +236,9 @@ Rules:
 - Exactly 6 spots
 - Real locations with accurate lat/lng
 - Realistic ratings between 3.8 and 4.9
-- Mix of land types: BLM, National Forest, State Park, etc.
 - Vary distances (5 mi to 80 mi from ${city})
-- Include both free and paid options`;
+- The filter requirement above is mandatory and overrides all other variety rules`;
+  };
 
   // ── State ─────────────────────────────────────────────────────────────
   let allSpots = [];
@@ -258,9 +273,6 @@ Rules:
 
     currentCity = city;
     allSpots = [];
-    activeFilter = "All";
-    document.querySelectorAll(".filter-chip").forEach(b => b.classList.toggle("active", b.textContent === "All"));
-
     showLoading(true);
     showError("");
     showEmpty(false);
@@ -282,7 +294,7 @@ Rules:
           max_tokens: 2048,
           messages: [
             { role: "system", content: "You are a public lands camping expert. Return ONLY raw JSON with no markdown, no code fences, no extra text." },
-            { role: "user", content: PROMPT_TEMPLATE(city) }
+            { role: "user", content: PROMPT_TEMPLATE(city, activeFilter) }
           ]
         })
       });
@@ -404,9 +416,9 @@ Rules:
       window.open(`https://www.google.com/maps/dir/?api=1&destination=${spot.lat},${spot.lng}`, "_blank");
 
 
-    // CellMapper deep-link — lat/lng/zoom query params are well-documented and reliable
+    // FCC National Broadband Map — mobile view, centered on campsite coords
     document.getElementById("opensignalBtn").href =
-      `https://www.cellmapper.net/map?type=LTE&latitude=${spot.lat}&longitude=${spot.lng}&zoom=11&showTowers=true&showTowerLabels=true&clusterEnabled=true&tilesEnabled=true`;
+      `https://broadbandmap.fcc.gov/provider-detail/mobile?zoom=11&vlat=${spot.lat}&vlon=${spot.lng}`;
 
     document.getElementById("overlay").classList.remove("hidden");
     document.body.style.overflow = "hidden";
