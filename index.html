@@ -188,10 +188,10 @@
     </div>
     <div class="coverage-section">
       <div class="coverage-label">📶 Check Cell Coverage</div>
-      <p class="coverage-note">Crowdsourced coverage data for all carriers, centered on this campsite.</p>
+      <p class="coverage-note">Shows cell towers & LTE coverage near this campsite (CellMapper, crowdsourced). Select your carrier after opening.</p>
       <div class="carrier-btns">
         <a id="opensignalBtn" class="carrier-btn carrier-opensignal" target="_blank" rel="noopener">
-          <span class="carrier-icon">📡</span> View Coverage Map (All Carriers)
+          <span class="carrier-icon">📡</span> View Cell Tower Map
         </a>
       </div>
     </div>
@@ -404,9 +404,9 @@ Rules:
       window.open(`https://www.google.com/maps/dir/?api=1&destination=${spot.lat},${spot.lng}`, "_blank");
 
 
-    // OpenSignal coverage deep-link (all carriers, reliable lat/lng centering)
+    // CellMapper deep-link — lat/lng/zoom query params are well-documented and reliable
     document.getElementById("opensignalBtn").href =
-      `https://opensignal.com/networks#maps/all-operators/signal/${spot.lat}/${spot.lng}`;
+      `https://www.cellmapper.net/map?type=LTE&latitude=${spot.lat}&longitude=${spot.lng}&zoom=11&showTowers=true&showTowerLabels=true&clusterEnabled=true&tilesEnabled=true`;
 
     document.getElementById("overlay").classList.remove("hidden");
     document.body.style.overflow = "hidden";
